@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Envíos Expresso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <img src="Logo.png" alt="Logo Envíos Expresso" class="logo-img">
+      <div>
+        <div class="brand-name">Envíos Expresso</div>
+        <div class="brand-tag">Como un shot de cafe</div>
+      </div>
+    </div>
+    <nav aria-label="Cuenta y seguimiento">
+      <a href="#ingresar">Ingresar</a>
+      <a href="#crear-cuenta">Crear cuenta</a>
+      <a href="#tracking" class="primary">Rastrear pedido</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div class="hero-content">
+      <div class="hero-text">
+        <h1>De Guatemala capital a los 22 departamentos, con tarifa fija.</h1>
+        <p>Enviamos tus paquetes desde la Ciudad de Guatemala hacia cualquier cabecera departamental del país, con un costo fijo según destino y seguimiento del pedido en cada etapa del envío.</p>
+      </div>
+      <div class="hero-image">
+        <img src="Logo.png" alt="Logo Envíos Expresso" class="hero-logo-img">
+      </div>
+    </div>
+
+    <div class="hero-meta">
+      <div>
+        <div class="num" id="meta-destinos">—</div>
+        <div class="lbl">destinos cubiertos</div>
+      </div>
+      <div>
+        <div class="num">01001</div>
+        <div class="lbl">origen fijo (Guatemala)</div>
+      </div>
+      <div>
+        <div class="num">5</div>
+        <div class="lbl">estados de seguimiento</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="board-section wrap" id="tarifas">
+    <div class="board-head">
+      <h2>Tarifas por destino</h2>
+      <span>precio en quetzales (Q)</span>
+    </div>
+    <div class="board">
+      <table>
+        <thead>
+          <tr>
+            <th>Destino</th>
+            <th>Código postal</th>
+            <th class="num-col">Precio</th>
+          </tr>
+        </thead>
+        <tbody id="tarifas-body">
+          <tr class="loading-row"><td colspan="3">Cargando tarifas…</td></tr>
+        </tbody>
+      </table>
+      <div class="board-foot">Origen: Ciudad de Guatemala (01001) — tarifas sujetas a cambio.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const tarifasJSON = `[
+    {"destino":"El Progreso","codigo_postal":"02001","precio":20.00},
+    {"destino":"Sacatepéquez","codigo_postal":"03001","precio":15.00},
+    {"destino":"Chimaltenango","codigo_postal":"04001","precio":20.00},
+    {"destino":"Escuintla","codigo_postal":"05001","precio":20.00},
+    {"destino":"Santa Rosa","codigo_postal":"06001","precio":25.00},
+    {"destino":"Sololá","codigo_postal":"07001","precio":30.00},
+    {"destino":"Totonicapán","codigo_postal":"08001","precio":35.00},
+    {"destino":"Quetzaltenango","codigo_postal":"09001","precio":35.00},
+    {"destino":"Suchitepéquez","codigo_postal":"10001","precio":30.00},
+    {"destino":"Retalhuleu","codigo_postal":"11001","precio":35.00},
+    {"destino":"San Marcos","codigo_postal":"12001","precio":45.00},
+    {"destino":"Huehuetenango","codigo_postal":"13001","precio":45.00},
+    {"destino":"Quiché","codigo_postal":"14001","precio":40.00},
+    {"destino":"Baja Verapaz","codigo_postal":"15001","precio":30.00},
+    {"destino":"Alta Verapaz","codigo_postal":"16001","precio":40.00},
+    {"destino":"Petén","codigo_postal":"17001","precio":65.00},
+    {"destino":"Izabal","codigo_postal":"18001","precio":50.00},
+    {"destino":"Zacapa","codigo_postal":"19001","precio":35.00},
+    {"destino":"Chiquimula","codigo_postal":"20001","precio":35.00},
+    {"destino":"Jalapa","codigo_postal":"21001","precio":25.00},
+    {"destino":"Jutiapa","codigo_postal":"22001","precio":30.00}
+  ]`;
+
+  function money(n) {
+    return 'Q' + Number(n).toFixed(2);
+  }
+
+  function renderTarifas(rutas) {
+    const body = document.getElementById('tarifas-body');
+    body.innerHTML = '';
+    rutas.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.destino}</td>
+        <td class="code-col">${r.codigo_postal}</td>
+        <td class="num-col">${money(r.precio)}</td>
+      `;
+      body.appendChild(tr);
+    });
+    document.getElementById('meta-destinos').textContent = rutas.length;
+  }
+
+  try {
+    const rutas = JSON.parse(tarifasJSON);
+    renderTarifas(rutas);
+  } catch (e) {
+    document.getElementById('tarifas-body').innerHTML =
+      '<tr class="loading-row"><td colspan="3">No se pudieron cargar las tarifas.</td></tr>';
+  }
+</script>
+
+</body>
+</html>

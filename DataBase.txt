@@ -1,0 +1,108 @@
+CREATE DATABASE CC6
+
+DROP TABLE IF EXISTS Paquete CASCADE;
+DROP TABLE IF EXISTS Ruta CASCADE;
+DROP TABLE IF EXISTS Ciudad CASCADE;
+DROP TABLE IF EXISTS Tienda CASCADE;
+DROP TABLE IF EXISTS Usuario CASCADE;
+DROP TYPE IF EXISTS estado_paquete;
+
+CREATE TABLE Ciudad (
+    codigo_postal   VARCHAR(5)    PRIMARY KEY,
+    nombre          VARCHAR(100)  NOT NULL
+);
+
+CREATE TABLE Ruta (
+    id_ruta         SERIAL        PRIMARY KEY,
+    codigo_origen   VARCHAR(5)    NOT NULL REFERENCES Ciudad(codigo_postal),
+    codigo_destino  VARCHAR(5)    NOT NULL REFERENCES Ciudad(codigo_postal),
+    precio          NUMERIC(10,2) NOT NULL CHECK (precio >= 0),
+    UNIQUE (codigo_origen, codigo_destino)   -- identidad de la entidad debil
+);
+
+CREATE TABLE Usuario (
+    id_usuario      SERIAL        PRIMARY KEY,
+    nombre          VARCHAR(100)  NOT NULL,
+    contrasena      VARCHAR(255)  NOT NULL   -- guardar siempre hasheada (bcrypt, etc.)
+);
+
+CREATE TABLE Tienda (
+    id_tienda       VARCHAR(15)   PRIMARY KEY,  -- 15 caracteres segun especificacion del proyecto
+    nombre          VARCHAR(100)  NOT NULL,
+    host            VARCHAR(255)  NOT NULL
+);
+
+CREATE TYPE estado_paquete AS ENUM (
+    'orden nueva',
+    'surtiendose',
+    'empacandose',
+    'en ruta',
+    'entregada'
+);
+
+CREATE TABLE Paquete (
+    id_paquete      SERIAL          PRIMARY KEY,
+    tracking_id     VARCHAR(20)     NOT NULL UNIQUE,   -- codigo que se le muestra al cliente
+    numero_orden    VARCHAR(50),                        -- numero de orden de la tienda (si aplica)
+    estado          estado_paquete  NOT NULL DEFAULT 'orden nueva',
+    peso            NUMERIC(6,2)    NOT NULL CHECK (peso > 0),
+    tamano          VARCHAR(20)     NOT NULL,
+
+    id_usuario      INTEGER         NOT NULL REFERENCES Usuario(id_usuario),
+    id_ruta         INTEGER         NOT NULL REFERENCES Ruta(id_ruta),      
+    id_tienda       VARCHAR(15)     REFERENCES Tienda(id_tienda)            -- opcional (0,1)
+);
+
+-- Indices para las consultas mas frecuentes del webservice
+CREATE INDEX idx_paquete_tracking ON Paquete(tracking_id);
+CREATE INDEX idx_paquete_usuario  ON Paquete(id_usuario);
+CREATE INDEX idx_paquete_tienda   ON Paquete(id_tienda);
+CREATE INDEX idx_ruta_destino     ON Ruta(codigo_destino);
+
+INSERT INTO Ciudad (codigo_postal, nombre) VALUES
+    ('01001', 'Guatemala'),
+    ('02001', 'El Progreso'),
+    ('03001', 'Sacatepequez'),
+    ('04001', 'Chimaltenango'),
+    ('05001', 'Escuintla'),
+    ('06001', 'Santa Rosa'),
+    ('07001', 'Solola'),
+    ('08001', 'Totonicapan'),
+    ('09001', 'Quetzaltenango'),
+    ('10001', 'Suchitepequez'),
+    ('11001', 'Retalhuleu'),
+    ('12001', 'San Marcos'),
+    ('13001', 'Huehuetenango'),
+    ('14001', 'Quiche'),
+    ('15001', 'Baja Verapaz'),
+    ('16001', 'Alta Verapaz'),
+    ('17001', 'Peten'),
+    ('18001', 'Izabal'),
+    ('19001', 'Zacapa'),
+    ('20001', 'Chiquimula'),
+    ('21001', 'Jalapa'),
+    ('22001', 'Jutiapa');
+
+INSERT INTO Ruta (codigo_origen, codigo_destino, precio) VALUES
+    ('01001', '02001', 20.00),
+    ('01001', '03001', 15.00),
+    ('01001', '04001', 20.00),
+    ('01001', '05001', 20.00),
+    ('01001', '06001', 25.00),
+    ('01001', '07001', 30.00),
+    ('01001', '08001', 35.00),
+    ('01001', '09001', 35.00),
+    ('01001', '10001', 30.00),
+    ('01001', '11001', 35.00),
+    ('01001', '12001', 45.00),
+    ('01001', '13001', 45.00),
+    ('01001', '14001', 40.00),
+    ('01001', '15001', 30.00),
+    ('01001', '16001', 40.00),
+    ('01001', '17001', 65.00),
+    ('01001', '18001', 50.00),
+    ('01001', '19001', 35.00),
+    ('01001', '20001', 35.00),
+    ('01001', '21001', 25.00),
+    ('01001', '22001', 30.00);
+
