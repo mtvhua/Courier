@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rastrear Pedido - Envíos Expresso</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand">
+      <a href="index.html" style="text-decoration: none; display: flex; align-items: center; gap: 12px; color: inherit;">
+        <img src="Logo.png" alt="Logo Envíos Expresso" class="logo-img">
+        <div>
+          <div class="brand-name">Envíos Expresso</div>
+          <div class="brand-tag">Como un shot de cafe</div>
+        </div>
+      </a>
+    </div>
+    <nav aria-label="Cuenta y seguimiento">
+      <a href="index.html">← Regresar a Inicio</a>
+      <a href="RastrearPedido.html" class="primary">Rastrear pedido</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" style="padding-top: 30px; padding-bottom: 60px;">
+  
+  <!-- VISTA CLIENTE -->
+  <section class="board-section" id="section-client">
+    <div class="board-head" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2>Seguimiento de Paquete</h2>
+        <span>Consulta el estado de tu envío</span>
+      </div>
+      <button type="button" onclick="switchRole('admin')" style="background: none; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: #555;">
+        Modo Administrador
+      </button>
+    </div>
+    
+    <div class="board" style="padding: 24px;">
+      <form id="tracking-form" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 30px;">
+        <div style="flex: 1; min-width: 200px;">
+          <label for="orden" style="display: block; margin-bottom: 6px; font-weight: 500;">Número de Orden:</label>
+          <input type="text" id="orden" name="orden" placeholder="Ej. ORD-1001" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        
+        <div style="flex: 1; min-width: 200px;">
+          <label for="tienda" style="display: block; margin-bottom: 6px; font-weight: 500;">ID / Nombre Tienda:</label>
+          <input type="text" id="tienda" name="tienda" placeholder="Ej. TIENDA01" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+
+        <!-- Formato oculto: manejado internamente en el backend -->
+        <input type="hidden" id="formato" value="json">
+
+        <div style="display: flex; align-items: flex-end;">
+          <button type="submit" class="primary" style="padding: 11px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600;">Consultar</button>
+        </div>
+      </form>
+
+      <!-- Panel de Resultado Sobrio (Sin botones ni tonos azules) -->
+      <div id="tracking-result" style="display: none; border-top: 1px solid #eee; padding-top: 24px; margin-top: 10px;">
+        <div style="background: #f9f9f9; border-left: 4px solid #333; padding: 12px 16px; border-radius: 0 4px 4px 0; margin-bottom: 30px;">
+          <span style="font-size: 0.8rem; color: #666; text-transform: uppercase; font-weight: 600;">Estado actual</span>
+          <h3 id="status-text" style="margin: 4px 0 0 0; color: #111; font-size: 1.2rem; font-weight: 700;">—</h3>
+        </div>
+        
+        <!-- Línea de tiempo limpia -->
+        <div class="timeline-wrapper" style="position: relative; margin: 30px 10px 10px 10px;">
+          <div style="position: absolute; top: 20px; left: 5%; right: 5%; height: 3px; background: #e0e0e0; z-index: 1;"></div>
+          <div id="timeline-progress" style="position: absolute; top: 20px; left: 5%; height: 3px; background: #706c6c; width: 0%; z-index: 2; transition: width 0.4s ease;"></div>
+
+          <div style="display: flex; justify-content: space-between; position: relative; z-index: 3;">
+            <div class="step-node" id="step-node-1" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ccc; color: #777; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">1</div>
+              <span class="step-title" style="margin-top: 8px; font-size: 0.85rem; color: #777; text-align: center;">Orden Nueva</span>
+            </div>
+
+            <div class="step-node" id="step-node-2" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ccc; color: #777; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">2</div>
+              <span class="step-title" style="margin-top: 8px; font-size: 0.85rem; color: #777; text-align: center;">Surtiéndose</span>
+            </div>
+
+            <div class="step-node" id="step-node-3" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ccc; color: #777; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">3</div>
+              <span class="step-title" style="margin-top: 8px; font-size: 0.85rem; color: #777; text-align: center;">Empacándose</span>
+            </div>
+
+            <div class="step-node" id="step-node-4" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ccc; color: #777; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">4</div>
+              <span class="step-title" style="margin-top: 8px; font-size: 0.85rem; color: #777; text-align: center;">En Ruta</span>
+            </div>
+
+            <div class="step-node" id="step-node-5" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 2px solid #ccc; color: #777; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">5</div>
+              <span class="step-title" style="margin-top: 8px; font-size: 0.85rem; color: #777; text-align: center;">Entregada</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+    <!-- ------------------------------------------------------------------------------------------------------------- -->
+
+  <!-- VISTA ADMINISTRADOR -->
+  <section class="board-section" id="section-admin" style="display: none;">
+    <div class="board-head" style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h2>Panel de Administración</h2>
+        <span>Actualizar estado de paquetes</span>
+      </div>
+      <button type="button" onclick="switchRole('client')" style="background: none; border: 1px solid #ccc; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: #555;">
+        Volver a Rastreo
+      </button>
+    </div>
+
+    <div class="board" style="padding: 24px;">
+      <form id="admin-update-form" style="display: flex; flex-direction: column; gap: 16px; max-width: 450px;">
+        <div>
+          <label for="admin-orden" style="display: block; margin-bottom: 6px; font-weight: 500;">Número de Orden:</label>
+          <input type="text" id="admin-orden" placeholder="Ej. ORD-1001" required style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+
+        <div>
+          <label for="admin-estado" style="display: block; margin-bottom: 6px; font-weight: 500;">Nuevo Estado del Paquete:</label>
+          <select id="admin-estado" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px;" required>
+            <option value="1. orden nueva">1. orden nueva</option>
+            <option value="2. surtiéndose">2. surtiéndose</option>
+            <option value="3. empacándose">3. empacándose</option>
+            <option value="4. en ruta">4. en ruta</option>
+            <option value="5. entregada">5. entregada</option>
+          </select>
+        </div>
+
+        <div>
+          <button type="submit" class="primary" style="padding: 11px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600;">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  const ESTADOS = [
+    "1. orden nueva",
+    "2. surtiéndose",
+    "3. empacándose",
+    "4. en ruta",
+    "5. entregada"
+  ];
+
+  function switchRole(role) {
+    document.getElementById('section-client').style.display = role === 'admin' ? 'none' : 'block';
+    document.getElementById('section-admin').style.display = role === 'admin' ? 'block' : 'none';
+  }
+
+  // Consulta Cliente
+  document.getElementById('tracking-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const orden = document.getElementById('orden').value;
+
+    // Simulación de búsqueda local
+    const mockStatus = ESTADOS[Math.floor(Math.random() * ESTADOS.length)];
+    document.getElementById('tracking-result').style.display = 'block';
+    document.getElementById('status-text').textContent = mockStatus.toUpperCase();
+    actualizarLineaDeTiempo(mockStatus);
+  });
+
+  // Actualización Administrador
+  document.getElementById('admin-update-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const orden = document.getElementById('admin-orden').value;
+    const nuevoEstado = document.getElementById('admin-estado').value;
+
+    alert(`Estado del paquete ${orden} actualizado a: "${nuevoEstado}" con éxito.`);
+  });
+
+  function actualizarLineaDeTiempo(statusActual) {
+    const estadoIndex = ESTADOS.findIndex(e => e.toLowerCase() === statusActual.toLowerCase()) + 1;
+    const progressBar = document.getElementById('timeline-progress');
+
+    if (estadoIndex > 1) {
+      const porcentaje = ((estadoIndex - 1) / (ESTADOS.length - 1)) * 90;
+      progressBar.style.width = `${porcentaje}%`;
+    } else {
+      progressBar.style.width = '0%';
+    }
+
+    for (let i = 1; i <= 5; i++) {
+      const nodeEl = document.getElementById(`step-node-${i}`);
+      const circle = nodeEl.querySelector('.icon-circle');
+      const title = nodeEl.querySelector('.step-title');
+
+      if (i <= estadoIndex) {
+        circle.style.borderColor = '#222';
+        circle.style.background = '#222';
+        circle.style.color = '#fff';
+        title.style.color = '#111';
+        title.style.fontWeight = '700';
+      } else {
+        circle.style.borderColor = '#ccc';
+        circle.style.background = '#fff';
+        circle.style.color = '#777';
+        title.style.color = '#777';
+        title.style.fontWeight = '500';
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
