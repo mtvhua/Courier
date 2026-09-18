@@ -1,3 +1,15 @@
+<?php
+session_start();
+include("conectar.php");
+
+pg_set_client_encoding($conn, "utf8");
+
+// Identificar al usuario y sus puntos
+$es_admin = isset($_SESSION['administrador']) && $_SESSION['administrador'] === true;
+$usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
+?>
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -21,8 +33,31 @@
       </div>
     </div>
     <nav aria-label="Cuenta y seguimiento">
-      <a href="#ingresar">Ingresar</a>
-      <a href="#crear-cuenta">Crear cuenta</a>
+       <div class="text-lg font-semibold text-blue-300">
+                <?php if ($es_admin): ?>
+                    Modo Administrador 
+                <?php elseif ($usuario_actual): ?>
+                    <?php echo htmlspecialchars($usuario_actual); ?> 
+                <?php else: ?>
+                    Modo Invitado
+                <?php endif; ?>
+            </div>
+            
+            <div class="flex items-center space-x-6">
+                <?php if ($es_admin || $usuario_actual): ?>
+                    <a href="cerrarSesion.php" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-white font-bold shadow-md transition-colors border border-red-700 hover:border-white">
+                        Cerrar Sesión
+                    </a>
+                <?php else: ?>
+                    <a href="ingresar.php" class="hover:text-blue-400 transition-colors font-bold text-lg">
+                        Iniciar Sesión
+                    </a>
+                    <a href="registro.php" class="bg-green-600 hover:bg-green-500 px-5 py-2 rounded-lg text-white font-bold shadow-md transition-colors border border-green-700 hover:border-white">
+                        Registrarse
+                    </a>
+                <?php endif; ?>
+            </div>
+      
       <a href="RastrearPedido.html" class="primary">Rastrear pedido</a>
     </nav>
   </div>
@@ -133,4 +168,5 @@
 </script>
 
 </body>
+
 </html>
