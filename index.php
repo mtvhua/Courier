@@ -2,68 +2,103 @@
 session_start();
 include("conectar.php");
 
-pg_set_client_encoding($conn, "utf8");
 
-// Identificar al usuario y sus puntos
+if (isset($conn)) {
+    pg_set_client_encoding($conn, "utf8");
+}
+
+
 $es_admin = isset($_SESSION['administrador']) && $_SESSION['administrador'] === true;
 $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
 ?>
-
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Envíos Expresso</title>
+  <title>Menú Principal - Envíos Expresso</title>
+  
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+  
 
-<header>
-  <div class="header-row">
-    <div class="brand">
-      <img src="Logo.png" alt="Logo Envíos Expresso" class="logo-img">
+  <link rel="stylesheet" href="styles.css">
+
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            espresso: '#3A2819',
+            'espresso-hover': '#2C1E12',
+            gold: '#CFA737',
+            'gold-hover': '#B8932C',
+            cream: '#EFF2F0',
+          },
+          fontFamily: {
+            display: ['"Big Shoulders Display"', 'sans-serif'],
+            sans: ['"IBM Plex Sans"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-cream font-sans">
+
+
+<header class="bg-espresso text-white px-8 py-4 shadow-md">
+  <div class="max-w-7xl mx-auto flex justify-between items-center">
+    
+  
+    <div class="flex items-center gap-3">
+      <img src="Logo.png" alt="Logo Envíos Expresso" class="h-10 w-auto bg-white p-1 rounded">
       <div>
-        <div class="brand-name">Envíos Expresso</div>
-        <div class="brand-tag">Como un shot de cafe</div>
+        <div class="font-display text-2xl font-bold tracking-wide uppercase leading-none">Envíos Expresso</div>
+        <div class="text-xs text-gray-300">Como un shot de cafe</div>
       </div>
     </div>
-    <nav aria-label="Cuenta y seguimiento">
-       <div class="text-lg font-semibold text-blue-300">
-                <?php if ($es_admin): ?>
-                    Modo Administrador 
-                <?php elseif ($usuario_actual): ?>
-                    <?php echo htmlspecialchars($usuario_actual); ?> 
-                <?php else: ?>
-                    Modo Invitado
-                <?php endif; ?>
-            </div>
-            
-            <div class="flex items-center space-x-6">
-                <?php if ($es_admin || $usuario_actual): ?>
-                    <a href="cerrarSesion.php" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded-lg text-white font-bold shadow-md transition-colors border border-red-700 hover:border-white">
-                        Cerrar Sesión
-                    </a>
-                <?php else: ?>
-                    <a href="ingresar.php" class="hover:text-blue-400 transition-colors font-bold text-lg">
-                        Iniciar Sesión
-                    </a>
-                    <a href="registro.php" class="bg-green-600 hover:bg-green-500 px-5 py-2 rounded-lg text-white font-bold shadow-md transition-colors border border-green-700 hover:border-white">
-                        Registrarse
-                    </a>
-                <?php endif; ?>
-            </div>
+
+   
+    <nav class="flex items-center gap-4 text-sm font-medium">
       
-      <a href="RastrearPedido.html" class="primary">Rastrear pedido</a>
+      <?php if ($es_admin): ?>
+
+        <span class="text-gold font-bold uppercase tracking-wider flex items-center gap-2">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z" clip-rule="evenodd"></path></svg>
+          Modo Administrador
+        </span>
+        <a href="cerrarSesion.php" class="border border-red-500 text-red-400 hover:bg-red-500 hover:text-white px-3 py-1.5 rounded transition-colors">Cerrar Sesión</a>
+      
+      <?php elseif ($usuario_actual): ?>
+
+        <span class="text-gray-200 font-semibold tracking-wide flex items-center gap-2">
+          <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          <?php echo htmlspecialchars($usuario_actual); ?>
+        </span>
+        <a href="cerrarSesion.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Cerrar Sesión</a>
+      
+      <?php else: ?>
+
+        <span class="text-gray-400 mr-2">Modo Invitado</span>
+        <a href="ingresar.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Iniciar Sesión</a>
+        <a href="registro.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Registrarse</a>
+      <?php endif; ?>
+
+
+      <a href="RastrearPedido.php" class="bg-gold hover:bg-gold-hover text-espresso font-semibold px-4 py-1.5 rounded transition-colors ml-2">Rastrear pedido</a>
     </nav>
+    
   </div>
 </header>
 
 <main>
+
   <section class="hero wrap">
     <div class="hero-content">
       <div class="hero-text">
@@ -168,5 +203,4 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
 </script>
 
 </body>
-
 </html>

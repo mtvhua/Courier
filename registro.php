@@ -1,5 +1,4 @@
 <?php
-session_start();
 $mensaje = "";
 $tipo_mensaje = ""; 
 
@@ -7,41 +6,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     include("conectar.php");
 
     $nombre = pg_escape_string($conn, $_POST['nombre']);
-    $contrasena = $_POST['contrasena'];
+    $contrasena_raw = $_POST['contrasena'];
 
-    if($nombre == "PerrY" && $contrasena == "PerrY"){
-        $_SESSION['administrador'] = true;
-       
-        header("Location: index.php"); 
-        exit();
-    }
+    // 1. Verificar si el nombre ya está registrado
+    $check_sql = "SELECT * FROM Usuario WHERE nombre = '$nombre'";
+    $check_resultado = pg_query($conn, $check_sql);
 
-    
-    $sql = "SELECT * FROM Usuario WHERE nombre = '$nombre'";
-    $resultado = pg_query($conn, $sql);
+    if ($check_resultado && pg_num_rows($check_resultado) > 0) {
+        $mensaje = "Ese nombre ya está registrado. Elige otro.";
+        $tipo_mensaje = "error";
+    } else {
+        // 2. Hashear la contraseña con bcrypt antes de guardar en la DB
+        $contrasena_hash = password_hash($contrasena_raw, PASSWORD_BCRYPT);
 
-    
-    if ($resultado && pg_num_rows($resultado) > 0) {
-        $usuario_db = pg_fetch_assoc($resultado);
-        
-   
-        if (password_verify($contrasena, $usuario_db['contrasena'])) {
-            $_SESSION['usuario'] = $usuario_db['nombre'];
-            header("Location: index.php");
-            exit();
+        // 3. Insertar en la tabla Usuario
+        $insert_sql = "INSERT INTO Usuario (nombre, contrasena) VALUES ('$nombre', '$contrasena_hash')";
+        $insert_resultado = pg_query($conn, $insert_sql);
+
+        if ($insert_resultado) {
+            $mensaje = "¡Registro exitoso! Ya puedes iniciar sesión.";
+            $tipo_mensaje = "exito";
         } else {
-            $mensaje = "Contraseña incorrecta.";
+            $mensaje = "Hubo un error al registrar. Inténtalo de nuevo.";
             $tipo_mensaje = "error";
         }
-    } else {
-        $mensaje = "El nombre de usuario no existe.";
-        $tipo_mensaje = "error";
     }
-
-
-
-
-
 }
 ?>
 
@@ -50,7 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iniciar Sesión - Envíos Expresso</title>
+  <title>Registro - Envíos Expresso</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -97,14 +86,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
   </header>
 
-  <!-- Caja de Inicio de Sesión -->
+  <!-- Caja de Registro -->
   <main class="flex-grow flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-xl border border-gray-200">
       
       <h1 class="font-display text-4xl font-extrabold text-espresso text-center uppercase tracking-wide mb-2">
-        Iniciar Sesión
+        Crear Cuenta
       </h1>
-      <p class="text-center text-gray-500 text-sm mb-6">Ingresa tus credenciales para gestionar tus envíos</p>
+      <p class="text-center text-gray-500 text-sm mb-6">Regístrate para comenzar a realizar tus envíos</p>
 
       <?php if($mensaje != ""): ?>
         <div class="p-3 mb-5 rounded-lg text-sm text-center font-semibold <?php echo ($tipo_mensaje == 'error') ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-green-100 text-green-700 border border-green-200'; ?>">
@@ -138,13 +127,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <button 
           type="submit" 
           class="w-full bg-gold hover:bg-gold-hover text-espresso font-extrabold uppercase py-3 rounded-lg shadow transition-colors mt-2">
-          Ingresar
+          Registrarme
         </button>
       </form>
 
       <div class="mt-6 pt-6 border-t border-gray-100 text-center text-sm text-gray-600">
-        ¿Aún no tienes cuenta? 
-        <a href="registro.php" class="text-espresso font-bold hover:underline ml-1">Regístrate aquí</a>
+        ¿Ya tienes una cuenta? 
+        <a href="ingresar.php" class="text-espresso font-bold hover:underline ml-1">Iniciar Sesión</a>
       </div>
 
     </div>

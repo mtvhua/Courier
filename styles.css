@@ -18,7 +18,8 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: 'IBM Plex Sans', sans-serif;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: antialiased
+  justify-content: center;
 }
 
 a { color: inherit; }
