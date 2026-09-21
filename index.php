@@ -2,14 +2,12 @@
 session_start();
 include("conectar.php");
 
-
 if (isset($conn)) {
     pg_set_client_encoding($conn, "utf8");
 }
 
-
-$es_admin = isset($_SESSION['administrador']) && $_SESSION['administrador'] === true;
-$usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
+$es_admin = isset($_SESSION['administrador']) &&$_SESSION['administrador'] === true;
+$usuario_actual = isset($_SESSION['usuario']) ?$_SESSION['usuario'] : null;
 ?>
 
 <!DOCTYPE html>
@@ -19,15 +17,12 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Menú Principal - Envíos Expresso</title>
   
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   
-
   <link rel="stylesheet" href="styles.css">
 
-  
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -51,11 +46,9 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
 </head>
 <body class="bg-cream font-sans">
 
-
 <header class="bg-espresso text-white px-8 py-4 shadow-md">
   <div class="max-w-7xl mx-auto flex justify-between items-center">
     
-  
     <div class="flex items-center gap-3">
       <img src="Logo.png" alt="Logo Envíos Expresso" class="h-10 w-auto bg-white p-1 rounded">
       <div>
@@ -64,7 +57,6 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
       </div>
     </div>
 
-   
     <nav class="flex items-center gap-4 text-sm font-medium">
       
       <?php if ($es_admin): ?>
@@ -81,6 +73,8 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
           <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
           <?php echo htmlspecialchars($usuario_actual); ?>
         </span>
+        <!-- Botón para ir al formulario de envío -->
+        <a href="enviar.php" class="border border-gold text-gold hover:bg-gold hover:text-espresso px-3 py-1.5 rounded transition-colors">Nuevo Envío</a>
         <a href="cerrarSesion.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Cerrar Sesión</a>
       
       <?php else: ?>
@@ -89,7 +83,6 @@ $usuario_actual = isset($_SESSION['usuario']) ? $_SESSION['usuario'] : null;
         <a href="ingresar.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Iniciar Sesión</a>
         <a href="registro.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Registrarse</a>
       <?php endif; ?>
-
 
       <a href="RastrearPedido.php" class="bg-gold hover:bg-gold-hover text-espresso font-semibold px-4 py-1.5 rounded transition-colors ml-2">Rastrear pedido</a>
     </nav>

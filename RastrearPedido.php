@@ -1,76 +1,41 @@
 <?php
-session_start();
-include("conectar.php"); // Conexión a la base de datos[cite: 2]
-
-$estado_actual = "";
-$error_mensaje = "";
-$admin_mensaje = "";
-$tipo_admin_msj = "exito";
-
-// Verificar si el usuario es admin[cite: 4, 5]
-$es_admin = isset($_SESSION['administrador']) &&$_SESSION['administrador'] === true;
-
-// 1. PROCESAR FORMULARIO DE CLIENTE (Rastreo - GET)
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['orden']) && isset($_GET['tienda'])) {$orden = pg_escape_string($conn,$_GET['orden']);
-    $tienda = pg_escape_string($conn, $_GET['tienda']);$query = "SELECT estado FROM Paquete WHERE numero_orden = '$orden' AND id_tienda = '$tienda'";
-    $resultado = pg_query($conn,$query);
-    
-    if ($resultado && pg_num_rows($resultado) > 0) {
-        $paquete = pg_fetch_assoc($resultado);
-        $estado_actual =$paquete['estado'];
-    } else {
-        $error_mensaje = "No se encontró ningún paquete con esa orden y tienda.";
-    }
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
-// 2. PROCESAR FORMULARIOS DE ADMINISTRADOR (CRUD - POST)
-if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])) {
-    $accion =$_POST['accion'];
+include("conectar.php");
 
-    if ($accion == "agregar") {
-        $tracking = pg_escape_string($conn,$_POST['tracking_id']);
-        $orden = pg_escape_string($conn, $_POST['numero_orden']);$peso = (float)$_POST['peso'];$tamano = pg_escape_string($conn,$_POST['tamano']);
-        $id_usuario = (int)$_POST['id_usuario'];
-        $id_ruta = (int)$_POST['id_ruta'];
-        $id_tienda = !empty($_POST['id_tienda']) ? "'" . pg_escape_string($conn,$_POST['id_tienda']) . "'" : "NULL";
-        $estado = pg_escape_string($conn,$_POST['estado']);
+// Verificación flexible de sesión
+$es_admin = isset($_SESSION['administrador']) && $_SESSION['administrador'] === true;
+$esta_logueado = isset($_SESSION['id_usuario']) || isset($_SESSION['usuario']) || $es_admin;
 
-        $sql = "INSERT INTO Paquete (tracking_id, numero_orden, estado, peso, tamano, id_usuario, id_ruta, id_tienda) 
-                VALUES ('$tracking', '$orden', '$estado',$peso, '$tamano',$id_usuario, $id_ruta,$id_tienda)";
-        
-        if (pg_query($conn, $sql)) {$admin_mensaje = "Paquete agregado exitosamente.";
-        } else {
-            $admin_mensaje = "Error al agregar paquete: " . pg_last_error($conn);$tipo_admin_msj = "error";
-        }
-    } 
-    elseif ($accion == "editar") {
-        $orden = pg_escape_string($conn,$_POST['numero_orden']);
-        $estado = pg_escape_string($conn, $_POST['estado']);$peso = (float)$_POST['peso'];$sql = "UPDATE Paquete SET estado = '$estado', peso = $peso WHERE numero_orden = '$orden'";
-        $res = pg_query($conn,$sql);
-        
-        // Validación limpia para evitar el error lógico anterior
-        if ($res) {
-            if (pg_affected_rows($res) > 0) {$admin_mensaje = "Paquete actualizado exitosamente.";
+$admin_mensaje = "";
+$tipo_admin_msj = "exito";
+$error_mensaje = "";
+$estado_actual = "";
+
+// LÓGICA DE CONSULTA DE PEDIDO
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['orden'], $_GET['tracking'])) {
+    if (!$esta_logueado) {
+        // Bloqueo si no hay sesión
+        $error_mensaje = "Debes iniciar sesión en tu cuenta para poder consultar el estado de tus paquetes.";
+    } else {
+        // Consulta normal si hay sesión
+        $orden = pg_escape_string($conn, trim($_GET['orden']));
+        $tracking = pg_escape_string($conn, trim($_GET['tracking']));
+
+        if (!empty($orden) && !empty($tracking)) {
+            $sql = "SELECT estado FROM Paquete WHERE numero_orden = '$orden' AND tracking_id = '$tracking'";
+            $res = pg_query($conn, $sql);
+
+            if ($res && pg_num_rows($res) > 0) {
+                $row = pg_fetch_assoc($res);
+                $estado_actual = strtolower(trim($row['estado']));
             } else {
-                 $admin_mensaje = "No se encontró un paquete con ese número de orden para actualizar.";
-                 $tipo_admin_msj = "error";
+                $error_mensaje = "No se encontró ningún paquete que coincida con el Número de Orden y Tracking ID proporcionados.";
             }
         } else {
-            $admin_mensaje = "Error al actualizar: " . pg_last_error($conn);$tipo_admin_msj = "error";
-        }
-    } 
-    elseif ($accion == "eliminar") {
-        $orden = pg_escape_string($conn, $_POST['numero_orden']);$sql = "DELETE FROM Paquete WHERE numero_orden = '$orden'";
-        $res = pg_query($conn,$sql);
-        
-        if ($res) {
-            if (pg_affected_rows($res) > 0) {$admin_mensaje = "Paquete eliminado exitosamente.";
-            } else {
-                $admin_mensaje = "No se encontró la orden especificada.";
-                $tipo_admin_msj = "error";
-            }
-        } else {
-            $admin_mensaje = "Error al eliminar: " . pg_last_error($conn);$tipo_admin_msj = "error";
+            $error_mensaje = "Por favor ingresa tanto el Número de Orden como el Tracking ID.";
         }
     }
 }
@@ -87,7 +52,6 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>
-    /* Estilos complementarios para los inputs dentro del panel oscuro */
     .admin-form input, .admin-form select {
       width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; 
       background: rgba(244,246,244,0.05); color: #F4F6F4; outline: none; margin-bottom: 12px; margin-top: 4px;
@@ -142,24 +106,28 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
     
     <div class="board" style="padding: 24px; color: #F4F6F4;">
       <form action="RastrearPedido.php" method="GET" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 30px;">
-        <div style="flex: 1; min-width: 200px;">
-          <label for="orden" style="display: block; margin-bottom: 6px; font-weight: 500;">Número de Orden:</label>
-          <input type="text" id="orden" name="orden" value="<?php echo isset($_GET['orden']) ? htmlspecialchars($_GET['orden']) : ''; ?>" placeholder="Ej. ORD-1001" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
-        </div>
-        
-        <div style="flex: 1; min-width: 200px;">
-          <label for="tienda" style="display: block; margin-bottom: 6px; font-weight: 500;">ID / Nombre Tienda:</label>
-          <input type="text" id="tienda" name="tienda" value="<?php echo isset($_GET['tienda']) ? htmlspecialchars($_GET['tienda']) : ''; ?>" placeholder="Ej. TIENDA01" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
-        </div>
+      
+      <!-- Campo 1: Número de Orden -->
+      <div style="flex: 1; min-width: 200px;">
+        <label for="orden" style="display: block; margin-bottom: 6px; font-weight: 500;">Número de Orden:</label>
+        <input type="text" id="orden" name="orden" value="<?php echo isset($_GET['orden']) ? htmlspecialchars($_GET['orden']) : ''; ?>" placeholder="Ej. 0002" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
+      </div>
+      
+      <!-- Campo 2: Tracking ID -->
+      <div style="flex: 1; min-width: 200px;">
+        <label for="tracking" style="display: block; margin-bottom: 6px; font-weight: 500;">Tracking ID:</label>
+        <input type="text" id="tracking" name="tracking" value="<?php echo isset($_GET['tracking']) ? htmlspecialchars($_GET['tracking']) : ''; ?>" placeholder="Ej. PKG20260921JC3Q" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
+      </div>
 
-        <div style="display: flex; align-items: flex-end;">
-          <button type="submit" class="primary" style="padding: 11px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600;">Consultar</button>
-        </div>
-      </form>
+      <div style="display: flex; align-items: flex-end;">
+        <button type="submit" class="primary" style="padding: 11px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600;">Consultar</button>
+      </div>
 
-      <?php if($error_mensaje != ""): ?>
+    </form>
+
+      <?php if(!empty($error_mensaje)): ?>
         <div style="background-color: rgba(229, 62, 62, 0.2); color: #ffa4a4; padding: 12px; border: 1px solid #e53e3e; border-radius: 4px; margin-bottom: 20px;">
-          <?php echo $error_mensaje; ?>
+          <?php echo htmlspecialchars($error_mensaje); ?>
         </div>
       <?php endif; ?>
 
@@ -209,13 +177,17 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
         <h2 style="color: var(--marigold);">Gestión de Paquetes (Admin)</h2>
         <span>Agregar, actualizar y eliminar paquetes en la base de datos</span>
       </div>
-      <button type="button" onclick="switchRole('client')" style="background: none; border: 1px solid var(--muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: var(--muted); font-weight: 500;">
-        Volver a Rastreo
-      </button>
+      <div style="display: flex; gap: 10px;">
+        <a href="estadoPaquete.php" style="background: var(--marigold); color: var(--ink); padding: 8px 14px; border-radius: 4px; text-decoration: none; font-size: 0.85rem; font-weight: 600;">
+          Cambiar solo Estado →
+        </a>
+        <button type="button" onclick="switchRole('client')" style="background: none; border: 1px solid var(--muted); padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; color: var(--muted); font-weight: 500;">
+          Volver a Rastreo
+        </button>
+      </div>
     </div>
 
     <div class="board" style="padding: 24px; color: #F4F6F4;">
-      
       <?php if($admin_mensaje != ""): ?>
         <div style="background-color: <?php echo ($tipo_admin_msj == 'error') ? 'rgba(229, 62, 62, 0.2)' : 'rgba(72, 187, 120, 0.2)'; ?>; border: 1px solid <?php echo ($tipo_admin_msj == 'error') ? '#e53e3e' : '#48bb78'; ?>; padding: 12px; border-radius: 4px; margin-bottom: 24px; font-weight: 500; color: <?php echo ($tipo_admin_msj == 'error') ? '#ffa4a4' : '#9ae6b4'; ?>;">
           <?php echo $admin_mensaje; ?>
@@ -223,7 +195,6 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
       <?php endif; ?>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px;">
-        
         <!-- AGREGAR -->
         <div class="admin-box">
           <h3 style="margin-top: 0; color: var(--marigold); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; font-size: 1.1rem;">Agregar Nuevo Paquete</h3>
@@ -364,13 +335,12 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
     }
   }
 
-  <?php if($estado_actual != ""): ?>
+  <?php if(!empty($estado_actual)): ?>
     document.getElementById('tracking-result').style.display = 'block';
     document.getElementById('status-text').textContent = "<?php echo strtoupper($estado_actual); ?>";
     actualizarLineaDeTiempo("<?php echo $estado_actual; ?>");
   <?php endif; ?>
   
-  // Mostrar automáticamente el panel admin si se acaba de enviar un formulario de gestión
   <?php if($es_admin &&$_SERVER["REQUEST_METHOD"] == "POST"): ?>
     switchRole('admin');
   <?php endif; ?>
