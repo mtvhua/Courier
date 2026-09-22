@@ -8,7 +8,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $nombre = pg_escape_string($conn, $_POST['nombre']);
     $contrasena_raw = $_POST['contrasena'];
 
-    // 1. Verificar si el nombre ya está registrado
+   
     $check_sql = "SELECT * FROM Usuario WHERE nombre = '$nombre'";
     $check_resultado = pg_query($conn, $check_sql);
 
@@ -16,10 +16,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $mensaje = "Ese nombre ya está registrado. Elige otro.";
         $tipo_mensaje = "error";
     } else {
-        // 2. Hashear la contraseña con bcrypt antes de guardar en la DB
+      
         $contrasena_hash = password_hash($contrasena_raw, PASSWORD_BCRYPT);
 
-        // 3. Insertar en la tabla Usuario
+       
         $insert_sql = "INSERT INTO Usuario (nombre, contrasena) VALUES ('$nombre', '$contrasena_hash')";
         $insert_resultado = pg_query($conn, $insert_sql);
 

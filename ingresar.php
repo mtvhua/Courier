@@ -78,7 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 <body class="bg-cream min-h-screen flex flex-col font-sans text-gray-800">
 
-  <!-- Encabezado -->
+
   <header class="bg-espresso text-white px-8 py-4 shadow-md">
     <div class="max-w-7xl mx-auto flex justify-between items-center">
       <div class="flex items-center gap-3">
@@ -97,7 +97,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     </div>
   </header>
 
-  <!-- Caja de Inicio de Sesión -->
+  
   <main class="flex-grow flex items-center justify-center p-6">
     <div class="w-full max-w-md bg-white p-8 rounded-xl shadow-xl border border-gray-200">
       

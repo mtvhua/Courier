@@ -3,9 +3,9 @@
 $conn = pg_connect("
     host=localhost
     port=5432
-    dbname=cc6
+    dbname=CC6
     user=postgres
-    password=1477
+    password=HOLA
 ");
 
 
