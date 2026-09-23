@@ -7,23 +7,36 @@ $error_mensaje = "";
 $admin_mensaje = "";
 $tipo_admin_msj = "exito";
 
-
 $es_admin = isset($_SESSION['administrador']) &&$_SESSION['administrador'] === true;
+$esta_logueado = isset($_SESSION['id_usuario']) || isset($_SESSION['usuario']) || $es_admin;
 
-
-if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['orden']) && isset($_GET['tienda'])) {$orden = pg_escape_string($conn,$_GET['orden']);
-    $tienda = pg_escape_string($conn, $_GET['tienda']);$query = "SELECT estado FROM Paquete WHERE numero_orden = '$orden' AND id_tienda = '$tienda'";
-    $resultado = pg_query($conn,$query);
-    
-    if ($resultado && pg_num_rows($resultado) > 0) {
-        $paquete = pg_fetch_assoc($resultado);
-        $estado_actual =$paquete['estado'];
+// LÓGICA DE CONSULTA (Actualizada para numero_orden y tracking_id)
+if ($_SERVER["REQUEST_METHOD"] == "GET" && isset($_GET['orden'], $_GET['tracking'])) {
+    if (!$esta_logueado) {
+        // Bloqueo si no hay sesión
+        $error_mensaje = "Debes iniciar sesión en tu cuenta para poder consultar el estado de tus paquetes.";
     } else {
-        $error_mensaje = "No se encontró ningún paquete con esa orden y tienda.";
+        // Consulta normal si hay sesión
+        $orden = pg_escape_string($conn, trim($_GET['orden']));
+        $tracking = pg_escape_string($conn, trim($_GET['tracking']));
+
+        if (!empty($orden) && !empty($tracking)) {
+            $sql = "SELECT estado FROM Paquete WHERE numero_orden = '$orden' AND tracking_id = '$tracking'";
+            $res = pg_query($conn, $sql);
+
+            if ($res && pg_num_rows($res) > 0) {
+                $row = pg_fetch_assoc($res);
+                $estado_actual = strtolower(trim($row['estado']));
+            } else {
+                $error_mensaje = "No se encontró ningún paquete que coincida con el Número de Orden y Tracking ID proporcionados.";
+            }
+        } else {
+            $error_mensaje = "Por favor ingresa tanto el Número de Orden como el Tracking ID.";
+        }
     }
 }
 
-
+// LÓGICA DE ADMINISTRADOR
 if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])) {
     $accion =$_POST['accion'];
 
@@ -48,12 +61,11 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
         $estado = pg_escape_string($conn, $_POST['estado']);$peso = (float)$_POST['peso'];$sql = "UPDATE Paquete SET estado = '$estado', peso = $peso WHERE numero_orden = '$orden'";
         $res = pg_query($conn,$sql);
         
-      
         if ($res) {
             if (pg_affected_rows($res) > 0) {$admin_mensaje = "Paquete actualizado exitosamente.";
             } else {
-                 $admin_mensaje = "No se encontró un paquete con ese número de orden para actualizar.";
-                 $tipo_admin_msj = "error";
+                $admin_mensaje = "No se encontró un paquete con ese número de orden para actualizar.";
+                $tipo_admin_msj = "error";
             }
         } else {
             $admin_mensaje = "Error al actualizar: " . pg_last_error($conn);$tipo_admin_msj = "error";
@@ -84,10 +96,9 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
   <title>Rastrear Pedido - Envíos Expresso</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <style>
-
     .admin-form input, .admin-form select {
       width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; 
       background: rgba(244,246,244,0.05); color: #F4F6F4; outline: none; margin-bottom: 12px; margin-top: 4px;
@@ -141,48 +152,65 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
     </div>
     
     <div class="board" style="padding: 24px; color: #F4F6F4;">
-      <form action="RastrearPedido.php" method="GET" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 30px;">
+      <form action="RastrearPedido.php" method="GET" style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 30px; align-items: flex-end;">
         <div style="flex: 1; min-width: 200px;">
-          <label for="orden" style="display: block; margin-bottom: 6px; font-weight: 500;">Número de Orden:</label>
-          <input type="text" id="orden" name="orden" value="<?php echo isset($_GET['orden']) ? htmlspecialchars($_GET['orden']) : ''; ?>" placeholder="Ej. ORD-1001" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
+          <label for="orden" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem;">Número de Orden:</label>
+          <input type="text" id="orden" name="orden" value="<?php echo isset($_GET['orden']) ? htmlspecialchars($_GET['orden']) : ''; ?>" placeholder="Ej. 0002" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.07); color: #fff;">
         </div>
         
         <div style="flex: 1; min-width: 200px;">
-          <label for="tienda" style="display: block; margin-bottom: 6px; font-weight: 500;">ID / Nombre Tienda:</label>
-          <input type="text" id="tienda" name="tienda" value="<?php echo isset($_GET['tienda']) ? htmlspecialchars($_GET['tienda']) : ''; ?>" placeholder="Ej. TIENDA01" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: #fff;">
+          <label for="tracking" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem;">Tracking ID:</label>
+          <input type="text" id="tracking" name="tracking" value="<?php echo isset($_GET['tracking']) ? htmlspecialchars($_GET['tracking']) : ''; ?>" placeholder="Ej. PKG20260921JC3Q" required style="width: 100%; padding: 10px; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; background: rgba(255,255,255,0.07); color: #fff;">
         </div>
 
-        <div style="display: flex; align-items: flex-end;">
-          <button type="submit" class="primary" style="padding: 11px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 600;">Consultar</button>
+        <div>
+          <button type="submit" style="padding: 10px 24px; cursor: pointer; border: none; border-radius: 4px; font-weight: 700; background: #EAEAEA; color: #111; font-size: 0.95rem;">Consultar</button>
         </div>
       </form>
 
       <?php if($error_mensaje != ""): ?>
         <div style="background-color: rgba(229, 62, 62, 0.2); color: #ffa4a4; padding: 12px; border: 1px solid #e53e3e; border-radius: 4px; margin-bottom: 20px;">
-          <?php echo $error_mensaje; ?>
+          <?php echo htmlspecialchars($error_mensaje); ?>
         </div>
       <?php endif; ?>
 
-     
-      <div id="tracking-result" class="tracking-card" style="display: none;">
-          <div class="status-banner">
-            <span class="status-label">Estado actual</span>
-            <h3 id="status-text" class="status-title">—</h3>
-          </div>
-          
-          <div class="timeline">
-            <div class="timeline-bg"></div>
-            <div id="timeline-progress" class="timeline-bar"></div>
+      <!-- Panel de Resultado -->
+      <div id="tracking-result" style="display: none; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 24px; margin-top: 10px;">
+        <div style="background: rgba(255,255,255,0.03); border-left: 3px solid var(--marigold); padding: 12px 16px; border-radius: 0 4px 4px 0; margin-bottom: 35px;">
+          <span style="font-size: 0.75rem; color: rgba(244,246,244,0.6); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">ESTADO ACTUAL</span>
+          <h3 id="status-text" style="margin: 4px 0 0 0; color: #F4F6F4; font-size: 1.3rem; font-weight: 800;">—</h3>
+        </div>
+        
+        <div class="timeline-wrapper" style="position: relative; margin: 30px 10px 20px 10px;">
+          <!-- Línea base gris -->
+          <div style="position: absolute; top: 20px; left: 10%; right: 10%; height: 2px; background: rgba(255,255,255,0.2); z-index: 1;"></div>
+          <!-- Línea activa amarilla -->
+          <div id="timeline-progress" style="position: absolute; top: 20px; left: 10%; height: 2px; background: var(--marigold); width: 0%; z-index: 2; transition: width 0.4s ease;"></div>
 
-            <div class="timeline-steps">
-              <div class="step-node" id="step-node-1"><div class="icon-circle">1</div><span class="step-title">Orden Nueva</span></div>
-              <div class="step-node" id="step-node-2"><div class="icon-circle">2</div><span class="step-title">Surtiéndose</span></div>
-              <div class="step-node" id="step-node-3"><div class="icon-circle">3</div><span class="step-title">Empacándose</span></div>
-              <div class="step-node" id="step-node-4"><div class="icon-circle">4</div><span class="step-title">En Ruta</span></div>
-              <div class="step-node" id="step-node-5"><div class="icon-circle">5</div><span class="step-title">Entregada</span></div>
+          <div style="display: flex; justify-content: space-between; position: relative; z-index: 3;">
+            <div class="step-node" id="step-node-1" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">1</div>
+              <span class="step-title" style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); text-align: center;">Orden Nueva</span>
+            </div>
+            <div class="step-node" id="step-node-2" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">2</div>
+              <span class="step-title" style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); text-align: center;">Surtiéndose</span>
+            </div>
+            <div class="step-node" id="step-node-3" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">3</div>
+              <span class="step-title" style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); text-align: center;">Empacándose</span>
+            </div>
+            <div class="step-node" id="step-node-4" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">4</div>
+              <span class="step-title" style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); text-align: center;">En Ruta</span>
+            </div>
+            <div class="step-node" id="step-node-5" style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+              <div class="icon-circle" style="width: 40px; height: 40px; border-radius: 50%; background: var(--ink); border: 2px solid rgba(255,255,255,0.3); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; transition: all 0.3s ease;">5</div>
+              <span class="step-title" style="margin-top: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); text-align: center;">Entregada</span>
             </div>
           </div>
         </div>
+      </div>
     </div>
   </section>
   
@@ -321,8 +349,9 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
     const estadoIndex = ESTADOS_DB.findIndex(e => e === statusActual) + 1;
     const progressBar = document.getElementById('timeline-progress');
 
+    // Calcula el porcentaje exacto entre el centro del nodo 1 y el centro del nodo activo
     if (estadoIndex > 1) {
-      const porcentaje = ((estadoIndex - 1) / (ESTADOS_DB.length - 1)) * 90;
+      const porcentaje = ((estadoIndex - 1) / (ESTADOS_DB.length - 1)) * 80;
       progressBar.style.width = `${porcentaje}%`;
     } else {
       progressBar.style.width = '0%';
@@ -336,12 +365,13 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
       if (i <= estadoIndex) {
         circle.style.borderColor = 'var(--marigold)';
         circle.style.background = 'var(--marigold)';
-        circle.style.color = 'var(--ink)';
+        circle.style.color = '#111';
+        circle.style.fontWeight = '700';
         title.style.color = '#F4F6F4';
         title.style.fontWeight = '700';
       } else {
-        circle.style.borderColor = 'rgba(255,255,255,0.3)';
-        circle.style.background = 'var(--ink)';
+        circle.style.borderColor = 'rgba(255,255,255,0.2)';
+        circle.style.background = 'transparent';
         circle.style.color = 'rgba(255,255,255,0.4)';
         title.style.color = 'rgba(255,255,255,0.4)';
         title.style.fontWeight = '500';
@@ -354,8 +384,7 @@ if ($es_admin && $_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['accion'])
     document.getElementById('status-text').textContent = "<?php echo strtoupper($estado_actual); ?>";
     actualizarLineaDeTiempo("<?php echo $estado_actual; ?>");
   <?php endif; ?>
-  
- 
+
   <?php if($es_admin &&$_SERVER["REQUEST_METHOD"] == "POST"): ?>
     switchRole('admin');
   <?php endif; ?>

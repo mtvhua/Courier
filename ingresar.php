@@ -89,10 +89,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         </div>
       </div>
       <nav class="flex items-center gap-4 text-sm font-medium">
-        <a href="Menu_Principal.php" class="hover:underline">Modo Invitado</a>
+        <a href="index.php" class="hover:underline">Modo Invitado</a>
         <a href="ingresar.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Iniciar Sesión</a>
         <a href="registro.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Registrarse</a>
-        <a href="RastrearPedido.html" class="bg-gold hover:bg-gold-hover text-espresso font-semibold px-4 py-1.5 rounded transition-colors">Rastrear pedido</a>
+        <a href="RastrearPedido.php" class="bg-gold hover:bg-gold-hover text-espresso font-semibold px-4 py-1.5 rounded transition-colors">Rastrear pedido</a>
       </nav>
     </div>
   </header>
