@@ -1,0 +1,14 @@
+# URLs del WebService tal como las pide el enunciado:
+#   http://host/Courier/consulta?destino=02001&formato=json
+#   http://host/Courier/envio?orden=...&tienda=...
+#   http://host/Courier/status?orden=...&tienda=...&formato=xml
+# Requiere mod_rewrite (en XAMPP ya viene activo).
+# Si no funciona, igual se puede llamar directo a api/consulta.php, etc.
+
+RewriteEngine On
+RewriteRule ^(consulta|envio|status)/?$ api/$1.php [L,QSA]
+
+# Nunca servir la configuración ni el script SQL
+<FilesMatch "\.(sql|md)$">
+    Require all denied
+</FilesMatch>

@@ -1,183 +1,128 @@
 <?php
-session_start();
-include("conectar.php");
+require_once __DIR__ . '/lib/auth.php';
+require_once __DIR__ . '/lib/paquetes.php';
+requerir_login();
 
-// Restringir acceso solo a usuarios con sesión activa
-if (!isset($_SESSION['usuario'])) {
-    header("Location: ingresar.php");
-    exit();
-}
+const TAMANOS = ['Sobre', 'Pequeño', 'Mediano', 'Grande'];
 
-$mensaje = "";
-$error = "";
+$error = '';
+$d = ['destinatario' => '', 'direccion' => '', 'destino' => '', 'peso' => '', 'tamano' => 'Pequeño', 'numero_orden' => ''];
 
-// Cargar las ciudades destino desde PostgreSQL
-$ciudades = [];
-if (isset($conn) && $conn) {
-    $res_ciudades = pg_query($conn, "SELECT codigo_postal, nombre FROM Ciudad ORDER BY nombre ASC");
-    if ($res_ciudades) {
-        $ciudades = pg_fetch_all($res_ciudades) ?: [];
+if (es_post()) {
+    foreach ($d as $campo => $_) {
+        $d[$campo] = post($campo);
     }
-}
 
-// Procesar la creación del paquete
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $codigo_destino = trim($_POST['codigo_destino']);
-    $tamano = trim($_POST['tamano']);
-    $peso = trim($_POST['peso']);
-    $numero_orden = trim($_POST['numero_orden']);
-
-    if (empty($codigo_destino) || empty($tamano) || empty($peso)) {
-        $error = "Por favor, completa todos los campos obligatorios.";
+    if ($d['destinatario'] === '' || $d['direccion'] === '' || $d['destino'] === '') {
+        $error = 'Completa destinatario, dirección y destino.';
+    } elseif (!is_numeric($d['peso']) || $d['peso'] <= 0 || $d['peso'] > 50) {
+        $error = 'El peso debe ser un número entre 0.01 y 50 lb.';
+    } elseif (!in_array($d['tamano'], TAMANOS, true)) {
+        $error = 'Tamaño inválido.';
     } else {
-        // 1. Obtener la Ruta correspondiente al destino (Origen fijo 01001)
-        $res_ruta = pg_query_params($conn, "SELECT id_ruta FROM Ruta WHERE codigo_origen = '01001' AND codigo_destino = $1", [$codigo_destino]);
-        $ruta_data = pg_fetch_assoc($res_ruta);
-
-        // 2. Obtener el id_usuario del usuario en sesión
-        $nombre_usuario = $_SESSION['usuario'];
-        $res_user = pg_query_params($conn, "SELECT id_usuario FROM Usuario WHERE nombre = $1", [$nombre_usuario]);
-        $user_data = pg_fetch_assoc($res_user);
-
-        if (!$ruta_data) {
-            $error = "La ruta hacia el destino seleccionado no está configurada.";
-        } else if (!$user_data) {
-            $error = "No se encontró la cuenta de usuario activa en la base de datos.";
-        } else {
-            $id_ruta = $ruta_data['id_ruta'];
-            $id_usuario = $user_data['id_usuario'];
-
-            // Generar un tracking_id único (ej. PKG20260920123)
-            $tracking_id = 'PKG' . date('Ymd') . substr(str_shuffle("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"), 0, 4);
-            $estado = 'orden nueva';
-
-            // Insertar en la tabla Paquete
-            $query = "INSERT INTO Paquete (tracking_id, numero_orden, estado, peso, tamano, id_usuario, id_ruta) 
-                      VALUES ($1, $2, $3, $4, $5, $6, $7)";
-
-            $result = pg_query_params($conn, $query, [
-                $tracking_id,
-                $numero_orden ?: null,
-                $estado,
-                $peso,
-                $tamano,
-                $id_usuario,
-                $id_ruta
-            ]);
-
-            if ($result) {
-                $mensaje = "¡Envío registrado con éxito! Tu número de rastreo (Tracking ID) es: <strong>$tracking_id</strong>";
-            } else {
-                $error = "Error al registrar el paquete: " . pg_last_error($conn);
-            }
+        try {
+            $p = crear_paquete($d + ['id_usuario' => usuario_actual()['id']]);
+            flash('ok', 'Envío registrado. Tu número de rastreo es <strong class="font-mono">' . e($p['tracking_id']) . '</strong>');
+            redirigir('mis_envios.php');
+        } catch (InvalidArgumentException $e) {
+            $error = $e->getMessage();
+        } catch (DbError $e) {
+            $error = db_mensaje_error($e);
         }
     }
 }
+
+$destinos = tarifas();
+
+$titulo  = 'Nuevo envío';
+$seccion = 'enviar';
+require __DIR__ . '/includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Crear Nuevo Envío - Envíos Expresso</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            espresso: '#3A2819',
-            'espresso-hover': '#2C1E12',
-            gold: '#CFA737',
-            'gold-hover': '#B8932C',
-            cream: '#EFF2F0',
-          }
-        }
-      }
-    }
-  </script>
-</head>
-<body class="bg-cream font-sans">
-
-<header class="bg-espresso text-white px-8 py-4 shadow-md">
-  <div class="max-w-7xl mx-auto flex justify-between items-center">
-    <div class="flex items-center gap-3">
-      <img src="Logo.png" alt="Logo" class="h-10 w-auto bg-white p-1 rounded">
-      <div>
-        <div class="text-2xl font-bold uppercase leading-none">Envíos Expresso</div>
-        <div class="text-xs text-gray-300">Como un shot de café</div>
-      </div>
-    </div>
-    <nav class="flex items-center gap-4 text-sm font-medium">
-      <a href="index.php" class="text-gray-200 hover:text-gold transition-colors">Inicio</a>
-      <a href="RastrearPedido.php" class="bg-gold hover:bg-gold-hover text-espresso font-semibold px-4 py-1.5 rounded transition-colors">Rastrear pedido</a>
-      <a href="cerrarSesion.php" class="border border-white/40 px-3 py-1.5 rounded hover:border-white transition-colors">Cerrar Sesión</a>
-    </nav>
-  </div>
-</header>
-
-<main class="max-w-3xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg">
-  <h1 class="text-3xl font-bold text-espresso mb-2">Crear Nuevo Envío</h1>
-  <p class="text-gray-600 mb-6">Ingresa los detalles del paquete para registrar la orden de transporte.</p>
-
-  <?php if ($mensaje): ?>
-    <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
-      <?php echo $mensaje; ?>
-    </div>
-  <?php endif; ?>
+<section class="max-w-3xl mx-auto px-4 sm:px-6 py-10">
+  <h1 class="titulo">Nuevo envío</h1>
+  <p class="text-gray-600 mb-6">Origen: Ciudad de Guatemala (<?= e(CODIGO_ORIGEN) ?>). Llena los datos del paquete.</p>
 
   <?php if ($error): ?>
-    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
-      <?php echo $error; ?>
-    </div>
+    <div class="px-4 py-3 mb-6 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200"><?= e($error) ?></div>
   <?php endif; ?>
 
-  <form method="POST" action="enviar.php" class="space-y-5">
-    
-    <!-- Selección de Destino -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Ciudad Destino *</label>
-      <select name="codigo_destino" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-gold focus:outline-none">
-        <option value="">Selecciona una ciudad destino</option>
-        <?php foreach ($ciudades as $c): ?>
-          <option value="<?php echo htmlspecialchars($c['codigo_postal']); ?>">
-            <?php echo htmlspecialchars($c['nombre']); ?> (<?php echo htmlspecialchars($c['codigo_postal']); ?>)
-          </option>
-        <?php endforeach; ?>
-      </select>
+  <form method="POST" class="card p-6 sm:p-8 space-y-5">
+    <div class="grid sm:grid-cols-2 gap-4">
+      <div>
+        <label class="label" for="destinatario">Destinatario *</label>
+        <input id="destinatario" name="destinatario" required maxlength="150" value="<?= e($d['destinatario']) ?>" class="input" placeholder="Nombre de quien recibe">
+      </div>
+      <div>
+        <label class="label" for="destino">Destino *</label>
+        <select id="destino" name="destino" required class="input">
+          <option value="">Selecciona un departamento</option>
+          <?php foreach ($destinos as $t): ?>
+            <option value="<?= e($t['codigo_postal']) ?>" <?= $d['destino'] === $t['codigo_postal'] ? 'selected' : '' ?>>
+              <?= e($t['destino']) ?> (<?= e($t['codigo_postal']) ?>)
+            </option>
+          <?php endforeach; ?>
+        </select>
+      </div>
     </div>
 
-    <!-- Tamaño y Peso -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="label" for="direccion">Dirección de entrega *</label>
+      <input id="direccion" name="direccion" required maxlength="255" value="<?= e($d['direccion']) ?>" class="input" placeholder="Calle, zona, referencia">
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Tamaño del Paquete *</label>
-        <select name="tamano" required class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-gold focus:outline-none">
-          <option value="Pequeño">Pequeño</option>
-          <option value="Mediano">Mediano</option>
-          <option value="Grande">Grande</option>
+        <label class="label" for="tamano">Tamaño *</label>
+        <select id="tamano" name="tamano" class="input">
+          <?php foreach (TAMANOS as $t): ?>
+            <option <?= $d['tamano'] === $t ? 'selected' : '' ?>><?= e($t) ?></option>
+          <?php endforeach; ?>
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Peso en Libras (lbs) *</label>
-        <input type="number" step="0.01" name="peso" required placeholder="Ej. 2.50" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-gold focus:outline-none">
+        <label class="label" for="peso">Peso (lb) *</label>
+        <input id="peso" name="peso" type="number" step="0.01" min="0.01" max="50" required value="<?= e($d['peso']) ?>" class="input" placeholder="Ej. 2.50">
+      </div>
+      <div>
+        <label class="label" for="numero_orden">N.º de orden (opcional)</label>
+        <input id="numero_orden" name="numero_orden" maxlength="50" value="<?= e($d['numero_orden']) ?>" class="input" placeholder="Ej. ORD-99823">
       </div>
     </div>
 
-    <!-- Número de Orden -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Número de Orden de Tienda (Opcional)</label>
-      <input type="text" name="numero_orden" placeholder="Ej. ORD-99823" class="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-2 focus:ring-gold focus:outline-none">
+    <div id="cotizacion" class="hidden rounded-lg bg-cream border border-gold/40 px-4 py-3 flex justify-between items-center">
+      <span class="text-sm text-gray-600">Costo de envío hacia <strong id="cot-destino"></strong></span>
+      <span id="cot-costo" class="font-display text-3xl font-extrabold text-espresso"></span>
     </div>
 
-    <div class="pt-4 flex justify-between items-center">
-      <a href="index.php" class="text-gray-500 hover:underline text-sm">Volver al inicio</a>
-      <button type="submit" class="bg-espresso hover:bg-espresso-hover text-white font-semibold px-6 py-2.5 rounded-lg transition-colors">
-        Registrar Envío
-      </button>
+    <div class="pt-2 flex justify-between items-center">
+      <a href="<?= url('mis_envios.php') ?>" class="text-sm text-gray-500 hover:underline">Ver mis envíos</a>
+      <button class="btn-dark px-6 py-2.5">Registrar envío</button>
     </div>
   </form>
-</main>
+</section>
 
-</body>
-</html>
+<script>
+  const selDestino = document.getElementById('destino');
+
+  function cotizar() {
+    const codigo = selDestino.value;
+    const caja = document.getElementById('cotizacion');
+    if (!codigo) { caja.classList.add('hidden'); return; }
+
+    fetch('<?= url('api/consulta.php') ?>?destino=' + encodeURIComponent(codigo) + '&formato=json')
+      .then(res => res.text())
+      .then(texto => {
+        const r = JSON.parse(texto).consultaprecio;
+        document.getElementById('cot-destino').textContent = selDestino.options[selDestino.selectedIndex].text;
+        document.getElementById('cot-costo').textContent =
+          r.cobertura === 'TRUE' ? 'Q' + Number(r.costo).toFixed(2) : 'Sin cobertura';
+        caja.classList.remove('hidden');
+      });
+  }
+
+  selDestino.addEventListener('change', cotizar);
+  cotizar();
+</script>
+
+<?php require __DIR__ . '/includes/footer.php'; ?>
