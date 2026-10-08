@@ -4,7 +4,7 @@ define('DB_HOST', 'localhost');
 define('DB_PORT', '5432');
 define('DB_NAME', 'cc6');        
 define('DB_USER', 'postgres');
-define('DB_PASS', '1477');       ////////////////// ACA SE CAMBIA LA CONTRA
+define('DB_PASS', 'HOLA');       ////////////////// ACA SE CAMBIA LA CONTRA
 
 // --- Datos del Courier (los devuelve el WebService) ------------------
 define('COURIER_ID', 'ENVIOS_EXPRESSO');  
